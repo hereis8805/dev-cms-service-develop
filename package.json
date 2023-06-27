@@ -58,7 +58,7 @@
     "xlsx-js-style": "^1.2.0"
   },
   "scripts": {
-    "dev": "set PORT=8082 && react-scripts start",
+    "dev": "set PORT=8083 && react-scripts start",
     "start": "nodemon --exec \"npm run start\"",
     "start:ec2": "PORT=8082 dotenv -e .ec2.env  react-scripts start",
     "build": "react-scripts build",

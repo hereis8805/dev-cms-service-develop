@@ -148,7 +148,8 @@ function CalculationProcessStep1() {
         headers: new Headers({ Accept: "application/json" }),
         method: "POST",
         body: JSON.stringify({
-          ACTUAL_MONTH: preDate
+          // ACTUAL_MONTH: preDate
+          ACTUAL_MONTH: date
         })
       })
       .then((res) => {
@@ -175,7 +176,8 @@ function CalculationProcessStep1() {
       let gcmManageId = row["컨텐츠번호"];
       const grossSales = row["총매출(구매금액+대여금액-취소금액)"];
       const grossSalesMinusAppMarketFee = row["총매출 - 앱마켓 수수료"];
-      const netSales = row["외화수수료 보정 순매출"];
+      // const netSales = row['외화수수료 보정 순매출'];
+      const netSales = row['외화수수료 반영 순매출'];
 
       // if (gcmManageId != 'NV034687' && gcmManageId != 'NV034756' && gcmManageId != 'NV034892') continue;
 
@@ -518,7 +520,8 @@ function CalculationProcessStep1() {
     }
 
     let files = [];
-    const thisYear = date.split("-")[0];
+    const thisYear = date.split('-')[0].substring(2, 4);
+    const thisFullYear = date.split('-')[0];
     const thisMonth = date.split("-")[1];
     const newDate = new Date(date);
     const nextMonth = (newDate.getMonth() + 2).toString();
@@ -529,6 +532,7 @@ function CalculationProcessStep1() {
       const gcdBusinessType = key.split("#")[0];
       const cpName = key.split("#")[1];
       const cpCode = key.split("#")[2];
+      const settlementPriority = key.split('#')[3];
       let cpGroup = "";
 
       // , ['', '구분', '작품명', '매출액', '원작료', '선차감 MG', '정산율', '후차감 MG', '정산금']
@@ -549,15 +553,19 @@ function CalculationProcessStep1() {
           title = v["제목"];
           contentType = v["작품 유형"];
           rate = v[`CP${cpType} 선차감 제외 정산률`];
-          grossSales += v["외화수수료 보정 순매출"];
+          // grossSales += v["외화수수료 보정 순매출"];
+          grossSales += v['외화수수료 반영 순매출'];
           sum += v[`CP${cpType} 정산금`];
           rawRate = v[`CP${cpType} 정산률 raw`];
+
+
         });
 
         a.push([prepaidSeq, contentType, title, grossSales, "", "", rate, "", sum, rawRate]);
+
       }
 
-      console.log(a);
+      
 
       // , ['', '플랫폼명', '결제방법', '매출액', '원작료', '선차감 MG', '정산율', '후차감 MG', '정산금']
       const b = [];
@@ -571,7 +579,8 @@ function CalculationProcessStep1() {
         let sum = 0;
         arySortedByCpIdPlatform[key].forEach((v) => {
           platformName = v["서비스"];
-          grossSales += v["외화수수료 보정 순매출"];
+          // grossSales += v["외화수수료 보정 순매출"];
+          grossSales += v['외화수수료 반영 순매출'];
           rate = v[`CP${cpType} 선차감 제외 정산률`];
           sum += v[`CP${cpType} 정산금`];
         });
@@ -587,7 +596,8 @@ function CalculationProcessStep1() {
         const cpType = key.split("#")[3];
         cpGroup = arySortedByCpId[key][j]["CP 그룹"];
 
-        grossSales += arySortedByCpId[key][j]["외화수수료 보정 순매출"];
+        // grossSales += arySortedByCpId[key][j]["외화수수료 보정 순매출"];
+        grossSales += arySortedByCpId[key][j]["외화수수료 반영 순매출"];
         sum += arySortedByCpId[key][j][`CP${cpType} 정산금`];
 
         secondSheetData.push({
@@ -681,37 +691,44 @@ function CalculationProcessStep1() {
         let gpmContract = 0;
         let gpmPrepaidSeq = "";
         let gpmOldPrepaid = "";
+        let gpmActualMonth ='';
         aryPrepaidMonthly.forEach((v) => {
           gpName = v["GP_NAME"];
           gpmPrepaidSeq = v["GPM_PREPAID_SEQ"];
           gpmOldPrepaid = v["GPM_OLD_PREPAID"];
           const gpmActualMonth = v["GPM_ACTUAL_MONTH"];
           if (gpmActualMonth == lastMonth) {
-            gpmPreviousContract = Math.round(v["GPM_PREVIOUS_CONTACT"]);
-            gpmContract = Math.round(v["GPM_CONTACT"]);
+            // gpmPreviousContract = Math.round(v["GPM_PREVIOUS_CONTACT"]);
+            // gpmContract = Math.round(v["GPM_CONTACT"]);
+            gpmPreviousContract = Math.round(v['GPM_PREVIOUS_REAL']);
+            gpmContract = Math.round(v['GPM_REAL']);
           }
-          thirdSheetData.push([
-            gpName,
-            ,
-            gpmPrepaidSeq,
-            ,
-            gpmActualMonth,
-            Math.round(v["GPM_PREVIOUS_REAL"]),
-            Math.round(v["GPM_REAL"]),
-            Math.round(v["GPM_PREVIOUS_REAL"]) + Math.round(v["GPM_REAL"]),
-            Math.round(v["GPM_REAL_DEDUCTION"]),
-            ,
-            ,
-            Math.round(v["GPM_REAL_BALANCE"])
-          ]);
+          // thirdSheetData.push([
+          //   gpName,
+          //   ,
+          //   gpmPrepaidSeq,
+          //   ,
+          //   gpmActualMonth,
+          //   Math.round(v["GPM_PREVIOUS_REAL"]),
+          //   Math.round(v["GPM_REAL"]),
+          //   Math.round(v["GPM_PREVIOUS_REAL"]) + Math.round(v["GPM_REAL"]),
+          //   Math.round(v["GPM_REAL_DEDUCTION"]),
+          //   ,
+          //   ,
+          //   Math.round(v["GPM_REAL_BALANCE"])
+          // ]);
         });
         let gpmContactDeduction = 0;
         const beforeDeduction = gpmPreviousContract + gpmContract;
         let correctionValue = 0;
         a.forEach((v) => {
           if (v[0] == gpmOldPrepaid) {
-            gpmContactDeduction = v[8];
+            gpmContactDeduction = v[8];//v[8] 차감금액
             if (cpGroup != "" && cpGroup != "Null") correctionValue = beforeDeduction * v[9];
+
+            console.log("111cpgroup")
+            console.log(cpGroup,v[7],correctionValue,beforeDeduction,v[9])
+            console.log(v)
           }
         });
         if (beforeDeduction > 0) {
@@ -730,9 +747,11 @@ function CalculationProcessStep1() {
                 headers: new Headers({ Accept: "application/json" }),
                 method: "POST",
                 body: JSON.stringify({
-                  GPM_OLD_PREPAID: gpmOldPrepaid,
-                  GPM_ACTUAL_MONTH: lastMonth,
-                  GPM_CONTACT_DEDUCTION: correctionValue * 2
+                  GPM_OLD_PREPAID: gpmOldPrepaid
+                  // GPM_ACTUAL_MONTH: lastMonth,
+                  // GPM_CONTACT_DEDUCTION: correctionValue * 2
+                  , 'GPM_ACTUAL_MONTH': thisFullYear+"-"+thisMonth
+                  , 'GPM_REAL_DEDUCTION': gpmContactDeduction
                 })
               })
               .then((res) => {
@@ -747,9 +766,11 @@ function CalculationProcessStep1() {
                 headers: new Headers({ Accept: "application/json" }),
                 method: "POST",
                 body: JSON.stringify({
-                  GPM_OLD_PREPAID: gpmOldPrepaid,
-                  GPM_ACTUAL_MONTH: lastMonth,
-                  GPM_CONTACT_DEDUCTION: gpmContactDeduction
+                  GPM_OLD_PREPAID: gpmOldPrepaid
+                  // GPM_ACTUAL_MONTH: lastMonth,
+                  // GPM_CONTACT_DEDUCTION: gpmContactDeduction
+                  , 'GPM_ACTUAL_MONTH': thisFullYear+"-"+thisMonth
+                  , 'GPM_REAL_DEDUCTION': gpmContactDeduction
                 })
               })
               .then((res) => {
@@ -760,6 +781,46 @@ function CalculationProcessStep1() {
               });
           }
         }
+
+        const aryPrepaidMonthly2 = await fetchUtils.fetchJson(
+          `${process.env.REACT_APP_API_PATH}/pg/gp_prepaid_monthly`
+          , {
+            headers: new Headers({Accept: "application/json"})
+              , method: "POST"
+              , body: JSON.stringify({
+                  'GPM_PREPAID_SEQ': c[i],
+                })
+            }
+        )
+        .then(res => { return JSON.parse(res.body); })
+        .catch(e => { throw e; });
+
+        aryPrepaidMonthly2.forEach(v => {
+          console.log("vvvvvvvvvvvvvvvv")
+          console.log(v)
+          gpName = v['GP_NAME'];
+          gpmPrepaidSeq = v['GPM_PREPAID_SEQ'];
+          gpmOldPrepaid = v['GPM_OLD_PREPAID'];
+          gpmActualMonth = v['GPM_ACTUAL_MONTH'];
+          if (gpmActualMonth == lastMonth) {
+            gpmPreviousContract = Math.round(v['GPM_PREVIOUS_REAL']);
+            gpmContract = Math.round(v['GPM_REAL']);
+          }
+          thirdSheetData.push([
+            gpName
+            ,
+            , gpmOldPrepaid
+            ,
+            , gpmActualMonth
+            , Math.round(v['GPM_PREVIOUS_REAL'])
+            , Math.round(v['GPM_REAL'])
+            , Math.round(v['GPM_PREVIOUS_REAL']) + Math.round(v['GPM_REAL'])
+            , Math.round(v['GPM_REAL_DEDUCTION'])
+            , 
+            ,
+            , Math.round(v['GPM_REAL_BALANCE'])
+          ]);
+        })
       }
 
       const totalDeduction = d.reduce((acc, cur) => acc + Number(cur[4]), 0);
@@ -788,11 +849,11 @@ function CalculationProcessStep1() {
           "",
           `${thisYear}년 ${thisMonth}월 정산`,
           "",
-          sum,
+          sum==0? '0': sum,
           "",
           "",
           tax,
-          sum - tax,
+          sum - tax ==0? '0': sum - tax,
           `${thisYear}년 ${nextMonth}월 ${lastDayOfNextMonth}일`
         ],
         ,
@@ -896,11 +957,11 @@ function CalculationProcessStep1() {
         inrow: { style: "thin" },
         alignment: { horizontal: "center" }
       });
-      XLSX.utils.sheet_set_range_style(firstSheet, `D${15 + a.length}:F${15 + a.length + b.length}`, {
+      XLSX.utils.sheet_set_range_style(firstSheet, `D${14 + a.length}:F${14 + a.length + b.length}`, {
         z: "#,##",
         alignment: { horizontal: "right" }
       });
-      XLSX.utils.sheet_set_range_style(firstSheet, `H${15 + a.length}:I${15 + a.length + b.length}`, {
+      XLSX.utils.sheet_set_range_style(firstSheet, `H${14 + a.length}:I${14 + a.length + b.length}`, {
         z: "#,##",
         alignment: { horizontal: "right" }
       });
@@ -909,6 +970,7 @@ function CalculationProcessStep1() {
         firstSheet,
         `B${18 + a.length + b.length}:I${19 + a.length + b.length + d.length}`,
         {
+
           top: { style: "thin" },
           bottom: { style: "thin" },
           left: { style: "thin" },
@@ -918,9 +980,14 @@ function CalculationProcessStep1() {
           alignment: { horizontal: "center" }
         }
       );
+      // XLSX.utils.sheet_set_range_style(
+      //   firstSheet,
+      //   `F${19 + a.length + b.length}:I${19 + a.length + b.length + d.length}`,
+      //   { z: "#,##", alignment: { horizontal: "right" } }
+      // );
       XLSX.utils.sheet_set_range_style(
         firstSheet,
-        `F${19 + a.length + b.length}:I${19 + a.length + b.length + d.length}`,
+        `C${17 + a.length + b.length}:F${17 + a.length + b.length + d.length}`,
         { z: "#,##", alignment: { horizontal: "right" } }
       );
       // WIDTH
